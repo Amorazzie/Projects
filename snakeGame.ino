@@ -16,14 +16,10 @@ struct Point {
 };
 
 Point snake[64];
-int snakeLenght = 3;
+int snakeLength = 3;
 
 int dx = 1;
 int dy = 0;
-
-int foodX, foodY;
-unsigned long lastFoodTime;
-const unsigned long foodDuration = 5000;
 
 int getPixelIndex(int x, int y) {
   if (y % 2 == 0) {
@@ -34,7 +30,7 @@ int getPixelIndex(int x, int y) {
 }
 
 void moveSnake() {
-  for (int i = snakeLenght - 1; i > 0; i--) {
+  for (int i = snakeLength - 1; i > 0; i--) {
     snake[i] = snake[i - 1];
   }
   snake[0].x += dx;
@@ -48,14 +44,10 @@ void moveSnake() {
   strip.clear();
 
   //Zeichne die Schlange
-  for (int i = 0; i < snakeLenght; i++) {
+  for (int i = 0; i < snakeLength; i++) {
     int index = getPixelIndex(snake[i].x, snake[i].y);
     strip.setPixelColor(index, strip.Color(0, 255, 0));
-
-    int foodIndex = getPixelIndex(foodX, foodY);
-    strip.setPixelColor(foodIndex, strip.Color(255, 255, 0));
   }
-
 
   strip.show();
 }
@@ -76,36 +68,100 @@ void placeFood() {
 
     valid = true;
 
-    for (int i = 0; i < snakeLenght; i++) {
+    for (int i = 0; i < snakeLength; i++) {
       if (foodx == snake[i].x && foody == snake[i].y) {
         valid = false;
         break;
       }
     }
   }
-  foodX = foodx;
-  foodY = foody;
-  lastFoodTime = millis();
 
-  int foodIndex = getPixelIndex(foodX, foody);
+  int foodIndex = getPixelIndex(foodx, foody);
   strip.setPixelColor(foodIndex, strip.Color(255, 255, 0));
   strip.show();
 }
-// void collision() {
-// }
+Point food;
 
-// void Left_Button(){
+void collision() {
+  // Check for collision with self
+  for (int i = 1; i < snakeLength; i++) {  // Start from 1 to avoid checking head against itself
+    if (snake[0].x == snake[i].x && snake[0].y == snake[i].y) {
+      Serial.println("GAME OVER!");
 
-// }
+      for (int flash = 0; flash < 3; flash++) {
+        strip.clear();
+        strip.show();
+        delay(200);
 
-// void Right_Button(){
+        snakeLength = 3;
+        spawnPoint();
+        strip.clear();
+        strip.show();
 
-// }
+        delay(2000);
+        placeFood();
+        return;
+      }
+    }
 
-// void button_function(){  ???
+    // Check for collision with food
+    if (snake[0].x == food.x && snake[0].y == food.y) {
+      snakeLength++;  // Increase snake length
+      if (snakeLength > PIXELS) {
+        snakeLength = PIXELS;
+      }
+      Serial.print(" ");
+      Serial.println(snakeLength);
+      placeFood();  // Place new food
+    }
+  }
+}
 
-// }
+void Left_Button() {
+  //If moving right, turn up
+  if (dx == 1 && dy == 0) {
+    dx = 0;
+    dy = -1;
+  }
+  // If moving up, turn left
+  else if (dx == 0 && dy == -1) {
+    dx = -1;
+    dy = 0;
+  }
+  // If moving left, turn down
+  else if (dx == -1 && dy == 0) {
+    dx = 0;
+    dy = 1;
+  }
+  // If moving down, turn right
+  else if (dx == 0 && dy == 1) {
+    dx = 1;
+    dy = 0;
+  }
+}
 
+void Right_Button() {
+  // If moving right, turn down
+  if (dx == 1 && dy == 0) {
+    dx = 0;
+    dy = 1;
+  }
+  // If moving down, turn left
+  else if (dx == 0 && dy == 1) {
+    dx = -1;
+    dy = 0;
+  }
+  // If moving left, turn up
+  else if (dx == -1 && dy == 0) {
+    dx = 0;
+    dy = -1;
+  }
+  // If moving up, turn rightz
+  else if (dx == 0 && dy == -1) {
+    dx = 1;
+    dy = 0;
+  }
+}
 
 void setup() {
   // put your setup code here, to run once:
@@ -115,7 +171,7 @@ void setup() {
 
   strip.begin();
   strip.clear();
-  strip.setBrightness(50);
+  strip.setBrightness(100);
   strip.show();
 
   spawnPoint();
@@ -126,10 +182,19 @@ void loop() {
   unsigned long now = millis();
   if (now - lastmove >= moveinterval) {
     moveSnake();
+    collision();
     lastmove = now;
   }
+  int buttonState = digitalRead(LEFT);
 
-  if (millis() - lastFoodTime >= foodDuration) {
-    placeFood();
+  int button2State = digitalRead(RIGHT);
+  if (buttonState == 0) {
+    Serial.println("LEFT");
+    delay(100);
   }
+  if (button2State == 0) {
+    Serial.println("RIGHT");
+    delay(100);
+  }
+  delay(10);
 }
